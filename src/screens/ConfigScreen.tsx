@@ -7,43 +7,44 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { lgService } from '../services/lgWebOS';
 
 const ConfigScreen = ({ navigation }: any) => {
-  const [ip, setIp] = useState('');
+  const [deviceName, setDeviceName] = useState('');
   const [loading, setLoading] = useState(false);
-  const [savedIp, setSavedIp] = useState('');
+  const [savedDevice, setSavedDevice] = useState('');
 
-  // Au chargement, on récupère l'IP sauvegardée
+  // Au chargement, on récupère le nom sauvegardé
   useEffect(() => {
-    AsyncStorage.getItem('tv_ip').then(val => {
-      if (val) { setIp(val); setSavedIp(val); }
+    AsyncStorage.getItem('device_name').then(val => {
+      if (val) { setDeviceName(val); setSavedDevice(val); }
     });
   }, []);
 
   const handleConnect = async () => {
-    if (!ip.trim()) {
-      Alert.alert('Erreur', 'Veuillez entrer l\'adresse IP de votre TV');
+    if (!deviceName.trim()) {
+      Alert.alert('Erreur', 'Veuillez entrer un nom pour votre appareil');
       return;
     }
 
     setLoading(true);
 
     try {
-      await AsyncStorage.setItem('tv_ip', ip.trim());
+      await AsyncStorage.setItem('device_name', deviceName.trim());
 
-      await lgService.connect(
-        ip.trim(),
+      lgService.connect(
+        deviceName.trim(),
         () => {
-          // Connexion réussie !
+          // Activation réussie !
           setLoading(false);
           Alert.alert(
-            '✅ Connecté !',
-            'Votre TV LG est connectée. Si c\'est la première fois, acceptez la demande sur votre TV.',
+            '✅ SmartRemote activé !',
+            'Mode simulation locale activé. Votre télécommande est prête.',
             [{ text: 'Ouvrir la télécommande', onPress: () => navigation.navigate('Remote') }]
           );
         },
-        (errMsg) => {
-          // Erreur de connexion
+
+        (errMsg: string) => {
           setLoading(false);
-          Alert.alert('❌ Erreur de connexion', errMsg);
+          Alert.alert('❌ Erreur', errMsg);
+
         }
       );
     } catch (e) {
@@ -53,9 +54,9 @@ const ConfigScreen = ({ navigation }: any) => {
   };
 
   const handleReset = async () => {
-    await AsyncStorage.multiRemove(['tv_ip', 'lg_client_key']);
-    setIp('');
-    setSavedIp('');
+    await AsyncStorage.multiRemove(['device_name', 'lg_client_key']);
+    setDeviceName('');
+    setSavedDevice('');
     lgService.disconnect();
     Alert.alert('Réinitialisé', 'La configuration a été effacée.');
   };
@@ -66,28 +67,27 @@ const ConfigScreen = ({ navigation }: any) => {
       <View style={styles.header}>
         <Text style={styles.logo}>📺</Text>
         <Text style={styles.title}>SmartRemote</Text>
-        <Text style={styles.subtitle}>Connectez votre TV LG WebOS</Text>
+        <Text style={styles.subtitle}>Mode Simulation Locale</Text>
       </View>
 
       {/* Carte de configuration */}
       <View style={styles.card}>
-        <Text style={styles.label}>Adresse IP de la TV</Text>
+        <Text style={styles.label}>Nom de l'appareil</Text>
         <TextInput
           style={styles.input}
-          value={ip}
-          onChangeText={setIp}
-          placeholder="ex: 192.168.1.45"
+          value={deviceName}
+          onChangeText={setDeviceName}
+          placeholder="ex: Mon Téléphone"
           placeholderTextColor="#999"
-          keyboardType="numeric"
           autoCorrect={false}
         />
 
         <Text style={styles.hint}>
-          💡 Pour trouver l'IP de votre TV : Paramètres → Réseau → Infos Wi-Fi
+          💡 Mode simulation : aucune TV requise. L'application fonctionne entièrement sur votre téléphone.
         </Text>
 
-        {savedIp ? (
-          <Text style={styles.savedInfo}>Dernière TV : {savedIp}</Text>
+        {savedDevice ? (
+          <Text style={styles.savedInfo}>Dernier appareil : {savedDevice}</Text>
         ) : null}
 
         <TouchableOpacity
@@ -98,11 +98,11 @@ const ConfigScreen = ({ navigation }: any) => {
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.btnText}>Se connecter</Text>
+            <Text style={styles.btnText}>Activer SmartRemote</Text>
           )}
         </TouchableOpacity>
 
-        {savedIp ? (
+        {savedDevice ? (
           <TouchableOpacity style={styles.btnReset} onPress={handleReset}>
             <Text style={styles.btnResetText}>Réinitialiser la configuration</Text>
           </TouchableOpacity>
@@ -113,10 +113,9 @@ const ConfigScreen = ({ navigation }: any) => {
       <View style={styles.steps}>
         <Text style={styles.stepsTitle}>Comment ça marche ?</Text>
         {[
-          'Connectez votre téléphone et votre TV au même Wi-Fi',
-          'Entrez l\'adresse IP de votre TV LG ci-dessus',
-          'Appuyez sur "Se connecter" — acceptez sur la TV',
-          'Profitez de votre télécommande !',
+          'Entrez un nom pour votre appareil ci-dessus',
+          'Appuyez sur "Activer SmartRemote"',
+          'Profitez de votre télécommande simulee !',
         ].map((step, i) => (
           <View key={i} style={styles.step}>
             <View style={styles.stepNum}>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  ScrollView, Alert, StatusBar, Modal, TextInput,
+  ScrollView, Alert, StatusBar, Modal,
 } from 'react-native';
 import { lgService } from '../services/lgWebOS';
 
@@ -21,6 +21,8 @@ const RemoteScreen = ({ navigation }: any) => {
   const [channelInput, setChannelInput] = useState('');
   const [showNumpad, setShowNumpad] = useState(false);
   const [connected, setConnected] = useState(true);
+  const [tvOn, setTvOn] = useState(true);
+  const [currentChannel, setCurrentChannel] = useState(1);
 
   useEffect(() => {
     setConnected(lgService.isTVConnected());
@@ -32,16 +34,29 @@ const RemoteScreen = ({ navigation }: any) => {
   };
 
   const handlePower = () => {
-    Alert.alert('Éteindre la TV', 'Voulez-vous éteindre votre TV LG ?', [
-      { text: 'Annuler', style: 'cancel' },
-      { text: 'Éteindre', style: 'destructive', onPress: () => lgService.powerOff() },
-    ]);
+    setTvOn(!tvOn);
+    lgService.powerOff();
+  };
+
+  const handleChannelUp = () => {
+    setCurrentChannel(currentChannel + 1);
+    lgService.channelUp();
+  };
+
+  const handleChannelDown = () => {
+    if (currentChannel > 1) {
+      setCurrentChannel(currentChannel - 1);
+      lgService.channelDown();
+    }
   };
 
   const handleNumpad = (num: string) => {
     if (num === '⌫') {
       setChannelInput(prev => prev.slice(0, -1));
     } else if (num === 'OK') {
+      if (channelInput) {
+        setCurrentChannel(parseInt(channelInput));
+      }
       setShowNumpad(false);
       setChannelInput('');
     } else {
@@ -53,6 +68,19 @@ const RemoteScreen = ({ navigation }: any) => {
     lgService.launchApp(appId);
     Alert.alert('', `Lancement de ${name}...`);
   };
+
+  // ── Écran TV éteinte ──
+  if (!tvOn) {
+    return (
+      <View style={styles.offContainer}>
+        <StatusBar barStyle="light-content" backgroundColor="#000" />
+        <Text style={styles.offText}>TV OFF</Text>
+        <TouchableOpacity onPress={handlePower} style={styles.powerBtn}>
+          <Text style={styles.powerBtnText}>Rallumer</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -73,6 +101,11 @@ const RemoteScreen = ({ navigation }: any) => {
         <View style={styles.row}>
           <Btn label="⏻" onPress={handlePower} color="#e50914" size={60} textSize={22} />
         </View>
+
+        {/* ── Chaîne actuelle ── */}
+        <Text style={styles.channelDisplay}>
+          Chaîne actuelle : {currentChannel}
+        </Text>
 
         {/* ── Volume & Chaînes ── */}
         <View style={styles.section}>
@@ -98,11 +131,11 @@ const RemoteScreen = ({ navigation }: any) => {
 
           <View style={styles.col}>
             <Text style={styles.sectionLabel}>CH</Text>
-            <Btn label="＋" onPress={() => lgService.channelUp()} color="#16213e" size={52} textSize={22} />
+            <Btn label="＋" onPress={handleChannelUp} color="#16213e" size={52} textSize={22} />
             <View style={{ height: 8 }} />
             <Btn label="🔢" onPress={() => setShowNumpad(true)} color="#16213e" size={52} textSize={18} />
             <View style={{ height: 8 }} />
-            <Btn label="－" onPress={() => lgService.channelDown()} color="#16213e" size={52} textSize={22} />
+            <Btn label="－" onPress={handleChannelDown} color="#16213e" size={52} textSize={22} />
           </View>
         </View>
 
@@ -167,6 +200,29 @@ const RemoteScreen = ({ navigation }: any) => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0f0f1a' },
+  offContainer: {
+    flex: 1,
+    backgroundColor: 'black',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  offText: {
+    color: 'white',
+    fontSize: 24,
+    marginBottom: 20,
+    fontWeight: '700',
+  },
+  powerBtn: {
+    backgroundColor: '#e50914',
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 50,
+  },
+  powerBtnText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '700',
+  },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     paddingTop: 50, paddingBottom: 20, gap: 10,
@@ -178,6 +234,13 @@ const styles = StyleSheet.create({
   section: { flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', marginVertical: 16, paddingHorizontal: 16 },
   col: { alignItems: 'center', gap: 0 },
   sectionLabel: { color: '#8888aa', fontSize: 11, fontWeight: '600', letterSpacing: 1, marginBottom: 10, textAlign: 'center' },
+  channelDisplay: {
+    color: 'white',
+    fontSize: 20,
+    textAlign: 'center',
+    marginVertical: 10,
+    fontWeight: '600',
+  },
   dpad: { alignItems: 'center', gap: 6 },
   dpadRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   btn: { justifyContent: 'center', alignItems: 'center', elevation: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.4, shadowRadius: 4 },
